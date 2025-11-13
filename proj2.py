@@ -76,7 +76,7 @@ def query_spectroscopy_catalog():
     '''
     logger.info("Querying Vizier for (Inami+ 2017) MUSE catalog")
     
-     v = Vizier(columns=["*"], row_limit=-1)
+    v = Vizier(columns=["*"], row_limit=-1)
     
     try:
         catalog_list = v.get_catalogs("J/A+A/608/A2")
@@ -88,14 +88,14 @@ def query_spectroscopy_catalog():
         # Get the combined table
         c = catalog_list[0]
         
-        logger.info(f"Got {len(catalog)} objects with spectroscopic redshifts")
-        logger.info(f"Columns: {catalog.colnames}")
+        logger.info(f"Got {len(c)} objects with spectroscopic redshifts")
+        logger.info(f"Columns: {c.colnames}")
         
         # I noticed that the rafelski and MUSE ones are different only in the decimal points since there is rounding rafelski, so im gonna round them to be the same.
-        if 'RAJ2000' in catalog.colnames:
-            catalog['RAJ2000'] = np.round(catalog['RAJ2000'], 6)
-        if 'DEJ2000' in catalog.colnames:
-            catalog['DEJ2000'] = np.round(catalog['DEJ2000'], 6)
+        if 'RAJ2000' in c.colnames:
+            c['RAJ2000'] = np.round(c['RAJ2000'], 6)
+        if 'DEJ2000' in c.colnames:
+            c['DEJ2000'] = np.round(c['DEJ2000'], 6)
             
         return c
         
@@ -106,7 +106,7 @@ def query_spectroscopy_catalog():
 
 
 def query_photometry_catalog():
-     """
+    """
     Query Vizier for Rafelski et al. 2015 photometric redshift catalog.
     
     Returns
@@ -120,19 +120,19 @@ def query_photometry_catalog():
     
     v = Vizier(columns=["*"], row_limit=-1)
     
-     try:
+    try:
         # Query catalog by the name written
         catalog_lst = v.get_catalogs("J/AJ/150/31")
         
-        if len(catalog_list) == 0:
+        if len(catalog_lst) == 0:
             logger.error("No catalog found!")
             return None
         
         # Get the main table thats labelled table5 on Vizier
         c = catalog_lst[0]
         
-        logger.info(f"Got {len(catalog)} objects with photometric redshifts")
-        logger.info(f"Columns: {catalog.colnames}")
+        logger.info(f"Got {len(c)} objects with photometric redshifts")
+        logger.info(f"Columns: {c.colnames}")
         
         return c
         
@@ -176,9 +176,9 @@ def cross_match_catalogs(photo_cat, spec_cat, ra_col_photo, dec_col_photo, ra_co
     '''
     
     # Let's create SkyCoord objects for both catalogs
-    photo_coords = SkyCoord(ra=photo_cat[ra_col_photo], dec=photo_cat[dec_col_photo])
+    photo_coords = SkyCoord(ra=photo_cat[ra_col_photo].value*u.deg, dec=photo_cat[dec_col_photo].value*u.deg)
     
-    spec_coords = SkyCoord(ra=spec_cat[ra_col_spec], dec=spec_cat[dec_col_spec])
+    spec_coords = SkyCoord(ra=spec_cat[ra_col_spec].value*u.deg, dec=spec_cat[dec_col_spec].value*u.deg)
     
     
     # Okay, this is a new thing i had to search up for the cross-verification cuz i had no idea how to do it
@@ -194,9 +194,90 @@ def cross_match_catalogs(photo_cat, spec_cat, ra_col_photo, dec_col_photo, ra_co
     match_fraction = 100.* len(photo_indices) / len(photo_cat)
     logger.info(f"{len(photo_indices)} matched sources ({match_fraction:.1f}% of photo catalog)")
     
+    
+    ## Without this line, life is becoming too complicated
+    photo_cat['has_spec'] = False
+    photo_cat['has_spec'][photo_indices] = True
+    
+    
+    logger.info(f"Added 'has_spec' column to photometric catalog")
     return photo_indices, spec_indices
     
+def overlayer(green, blue, red, wcs, photo_cat, matched_indices,
+                          ra_col='RAJ2000', dec_col='DEJ2000'):
+    '''
+    Creates RGB composite with catalog overlays [the other functions to just plot the thing might be irrelevant now]
     
+    Uses the 'has_spec' column added by cross_match_catalogs to color sources.
+    
+    Parameters
+    ----------
+    green, blue, red : ndarray
+        Image data for each channel
+    wcs : WCS
+        World coordinate system
+    photo_cat : Table
+        Photometric catalog (with 'has_spec' column added)
+    matched_indices : tuple
+        (photo_idx, spec_idx) of matched sources
+    ra_col, dec_col : str
+        Column names for coordinates
+        
+    Returns
+    -------
+    fig : Figure
+        Matplotlib figure
+    rgb_image : ndarray
+        RGB composite image
+    '''
+    if not (red.shape == green.shape == blue.shape):
+        raise ValueError("All input images must have the same dimensions.")
+    
+    rgb_image = make_lupton_rgb(red, green, blue, stretch=0.01, Q=10)
+    
+    fig = plt.figure(figsize=(16, 14))
+    ax = plt.subplot(projection=wcs)
+    ax.imshow(rgb_image, origin='lower')
+    
+    ra_all = photo_cat[ra_col]
+    dec_all = photo_cat[dec_col]
+    # this is because we need to make sure the circle is plotted at the right place, and not in the wrong area over the wrong galaxies
+    pixel_coords = wcs.world_to_pixel_values(ra_all, dec_all)
+    
+    # Plot photo-z only, i.e. places where the (has_spec == False) in cyan
+    mask_photo_only = ~photo_cat['has_spec'] # using logical not for quicker and concise code D:
+    
+    n_photo_only = np.sum(mask_photo_only)
+    logger.info(f"Plotting {n_photo_only} photo-z only sources")
+    
+    ax.scatter(pixel_coords[0][mask_photo_only], pixel_coords[1][mask_photo_only],
+              s=25, facecolors='none', edgecolors='cyan',
+              linewidths=0.6, alpha=0.4,
+              label=f'Photo-z only (N={n_photo_only})')
+    
+    # Plot spec-z available (has_spec == True) in red
+    mask_has_spec = photo_cat['has_spec']
+    n_spec = np.sum(mask_has_spec)
+    logger.info(f"Plotting {n_spec} sources with spec-z")
+    
+    ax.scatter(pixel_coords[0][mask_has_spec], pixel_coords[1][mask_has_spec],
+              s=60, facecolors='none', edgecolors='red',
+              linewidths=1.2, alpha=0.8,
+              label=f'Spec-z available (N={n_spec})')
+    
+    ax.set_title("Hubble Ultra Deep Field: Photometric vs Spectroscopic Redshifts\n" +
+                "RGB: F775W (Red) / F606W (Green) / F435W (Blue)",
+                fontsize=15, fontweight='bold', pad=20)
+    ax.set_xlabel("Right Ascension (J2000)", fontsize=13)
+    ax.set_ylabel("Declination (J2000)", fontsize=13)
+    ax.legend(loc='upper right', fontsize=11, framealpha=0.95)
+    ax.grid(color='white', ls='dotted', alpha=0.25)
+    
+    plt.tight_layout()
+    logger.info("Catalog overlay complete")
+    
+    return fig, rgb_image
+
                 
 def fits_image_loader(filename):
     '''
@@ -232,10 +313,6 @@ def fits_image_loader(filename):
     
     return data, wcs
 
-
-def scaling(data):
-    norm = ImageNormalize(data, interval=ZScaleInterval(), stretch=AsinhStretch())
-    return norm(data)
     
 def rgb_img(green,blue,red,wcs):
     '''
@@ -243,7 +320,7 @@ def rgb_img(green,blue,red,wcs):
     
     using Asinhstretch for scaling
     I'm not actually using this stretch anymore, im using the Lupton 2004 
-    package 
+    package, but i was using it before, so i've kept it in here
     
     https://docs.astropy.org/en/stable/api/astropy.visualization.AsinhStretch.html
     
@@ -260,13 +337,6 @@ def rgb_img(green,blue,red,wcs):
     except:
         print("Exiting code...")
         sys.exit()
-        
-    red_scaled = scaling(red)
-    green_scaled = scaling(green)
-    blue_scaled = scaling(blue)
-    
-    
-    rgb_image = np.dstack((red_scaled, green_scaled, blue_scaled))
     
     ## Trying this Lupton thing because the stacking is oversaturating image
     rgb_image = make_lupton_rgb(red_data, green_data, blue_data, stretch=0.01, Q=10)
@@ -319,10 +389,9 @@ if __name__ == "__main__":
     logging.info("Saved RGB composite as 'HST_RGB_composite.png' and pdf version")
     
     logger.info("\n[STEP 2] Querying catalogs from VizieR...")
-    logger.info("This may take a minute...")
     
-    photo = query_photometric_catalog()
-    spec = query_spectroscopic_catalog()
+    photo = query_photometry_catalog()
+    spec = query_spectroscopy_catalog()
     
     if photo is None or spec is None:
         logger.error("failed to get catalogs, try again")
@@ -335,4 +404,10 @@ if __name__ == "__main__":
     
     matched_indices = cross_match_catalogs(photo, spec, ra_col_photo='RAJ2000', dec_col_photo='DEJ2000',ra_col_spec='RAJ2000', dec_col_spec='DEJ2000', match_radius=0.04*u.arcsec) # I have faith in the match_radius being this low by eye seeing how 2-3 sources were pretty close in RA and DEC on this thing.
 
-
+    
+    fig_cats, _ = overlayer(green_data, blue_data, red_data, wcs, photo, matched_indices)
+    
+    fig_cats.savefig("hudf_with_catalogs.png", dpi=300, bbox_inches='tight')
+    fig_cats.savefig("hudf_with_catalogs.pdf", bbox_inches='tight')
+    logger.info("Saved overlayed mosaic")
+    plt.show()
