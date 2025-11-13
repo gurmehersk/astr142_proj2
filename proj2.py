@@ -339,7 +339,7 @@ def rgb_img(green,blue,red,wcs):
         sys.exit()
     
     ## Trying this Lupton thing because the stacking is oversaturating image
-    rgb_image = make_lupton_rgb(red_data, green_data, blue_data, stretch=0.01, Q=10)
+    rgb_image = make_lupton_rgb(red, green, blue, stretch=0.01, Q=10)
     
     logger.info("Plotting RGB composite")
     fig = plt.figure(figsize=(8, 8))
@@ -352,7 +352,7 @@ def rgb_img(green,blue,red,wcs):
     plt.show()
 
     logger.info("RGB mosaic created successfully.")
-    return rgb_image
+    return fig, rgb_image
     
 if __name__ == "__main__":
 
@@ -377,14 +377,14 @@ if __name__ == "__main__":
     green_data, _  = fits_image_loader(f_606)  # WCS same
     red_data, _    = fits_image_loader(f_775)
     
-    rgb_image = rgb_img(green_data, blue_data, red_data, wcs)
+    fig, rgb_image = rgb_img(green_data, blue_data, red_data, wcs)
     
-    from scipy.ndimage import rotate
-    rotated_img = rotate(rgb_image, angle=45, reshape=False)
+    '''from scipy.ndimage import rotate
+    rotated_img = rotate(rgb_image, angle=45, reshape=False)'''
     
      # Optionally save the image as PNG
-    plt.imsave("HST_RGB_composite.png", rgb_image, origin='lower')
-    plt.savefig("HST_RGB_composite.pdf", bbox_inches='tight')
+    fig.savefig("HST_RGB_composite.png", dpi=300, bbox_inches='tight')
+    fig.savefig("HST_RGB_composite.pdf", bbox_inches='tight')
     plt.show()
     logging.info("Saved RGB composite as 'HST_RGB_composite.png' and pdf version")
     
