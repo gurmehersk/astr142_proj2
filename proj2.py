@@ -102,7 +102,9 @@ def query_spectroscopy_catalog():
     except Exception as e:
         logger.error(f"VizieR query failed: {e}")
         return None
-    
+
+
+
 def query_photometry_catalog():
      """
     Query Vizier for Rafelski et al. 2015 photometric redshift catalog.
@@ -138,7 +140,64 @@ def query_photometry_catalog():
         logger.error(f"VizieR query failed: {e}")
         return None
 
+def cross_match_catalogs(photo_cat, spec_cat, ra_col_photo, dec_col_photo, ra_col_spec, dec_col_spec, match_radius):
+    '''
+    We are going to check the RA and DEC of objects with extreme precision 
     
+    Parameters
+    -----------
+    photo_cat : csv file
+        Contains the rafelski catalog csv file, with ra, dec and everything we will need to do the ra dec verification
+    
+    spec_cat : csv file
+        Contains the muse spectroscopic data csv file, with ra, dec and everything we will need to the verification, and with the ra and dec rounded to the 6th decimal place to ensure same precision in both catalogs
+        
+    ra_col_photo : string
+        Name of the column in the photometric catalog that contains the RA
+    
+    dec_col_photo : string
+        Name of the column in the photometric catalog that contains the DEC
+        
+    ra_col_spec : string
+        Name of the column in the spectroscopic catalog that contains teh RA
+        
+    dec_col_spec : string
+        Name of the column in the spectroscopic catalog that contains teh DEC
+                
+    match_radius : int (arcsecond units)
+        The tolerance for matching 
+        
+    Returns
+    -----------
+    photo_indices : ndarray
+        Indices of matched sources in photometric catalog
+    spec_indices : ndarray
+        Indices of matched sources in spectroscopic catalog
+    '''
+    
+    # Let's create SkyCoord objects for both catalogs
+    photo_coords = SkyCoord(ra=photo_cat[ra_col_photo], dec=photo_cat[dec_col_photo])
+    
+    spec_coords = SkyCoord(ra=spec_cat[ra_col_spec], dec=spec_cat[dec_col_spec])
+    
+    
+    # Okay, this is a new thing i had to search up for the cross-verification cuz i had no idea how to do it
+    # The match_to_catalog_sky returns 3 values, the index of spec_coords that is closest to the photo_coords, its separation, and 3D separation, but we dont need 3D separation
+    idx_spec, sep, _ = photo_coords.match_to_catalog_sky(spec_coords)
+    
+    # Only keep matches within the specified radius
+    matched_mask = sep < match_radius
+    photo_indices = np.where(matched_mask)[0]
+    spec_indices = idx_spec[matched_mask]
+    
+    ### The above method might be a little hard to grasp, but essentially we see if the sep < match_radius, and if that's true, we make the photo_indices wherever the mask is true, and spec index becomes the indexes of true. So this way, the order and alignment is preserved for the photometric and sepectroscopic galaxies
+    match_fraction = 100.* len(photo_indices) / len(photo_cat)
+    logger.info(f"{len(photo_indices)} matched sources ({match_fraction:.1f}% of photo catalog)")
+    
+    return photo_indices, spec_indices
+    
+    
+                
 def fits_image_loader(filename):
     '''
     Parameters
@@ -262,8 +321,18 @@ if __name__ == "__main__":
     logger.info("\n[STEP 2] Querying catalogs from VizieR...")
     logger.info("This may take a minute...")
     
-    photo_cat = query_photometric_catalog()
-    spec_cat = query_spectroscopic_catalog()
-
+    photo = query_photometric_catalog()
+    spec = query_spectroscopic_catalog()
+    
+    if photo is None or spec is None:
+        logger.error("failed to get catalogs, try again")
+        sys.exit(1)
+    
+    
+    photo.write('rafelski_photometric_catalog.csv', format='csv', overwrite=True)
+    spec.write('muse_spectroscopic_catalog.csv', format='csv', overwrite=True)
+    
+    
+    matched_indices = cross_match_catalogs(photo, spec, ra_col_photo='RAJ2000', dec_col_photo='DEJ2000',ra_col_spec='RAJ2000', dec_col_spec='DEJ2000', match_radius=0.04*u.arcsec) # I have faith in the match_radius being this low by eye seeing how 2-3 sources were pretty close in RA and DEC on this thing.
 
 
