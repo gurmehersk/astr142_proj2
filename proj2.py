@@ -486,7 +486,7 @@ if __name__ == "__main__":
     
     ### I checked the names in the csv file, so dont need to add any checkers to this
     photo_z_col = "zph1"
-    photo_z_spec = "zMuse"
+    spec_z_col = "zMuse"
     
     fig_comparison = scatter_plotter(photo, spec, matched_indices, photo_z_col, spec_z_col)
     
