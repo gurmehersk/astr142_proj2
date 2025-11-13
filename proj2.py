@@ -20,7 +20,11 @@ For image scaling,
 https://docs.astropy.org/en/stable/visualization/normalization.html
 
 We query using 
-the 2017A&A...608A...3B bibcode query from SIMBAD 
+https://ui.adsabs.harvard.edu/abs/2015AJ....150...31R/abstract
+this is for 
+
+photometric  redshifts: https://vizier.cds.unistra.fr/viz-bin/VizieR-4
+spectroscopic redshifts: https://vizier.cds.unistra.fr/viz-bin/VizieR-4
 '''
 
 # Color mapping documentation
@@ -52,7 +56,7 @@ import IPython
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.table import Table
-from astroquery.simbad import Simbad
+from astroquery.vizier import Vizier
 
 
 # configuring the logger, might put this in the "main" if i end up creating one
@@ -61,6 +65,80 @@ logger = logging.getLogger(__name__)
 
 quantity_support()
 
+def query_spectroscopy_catalog():
+    '''
+    Query Vizier for MUSE spectrscopic redshift catalog
+    
+    Returns
+    -------
+    c : Table
+        Spectroscopic catalog with RA, DEC, z_spec
+    '''
+    logger.info("Querying Vizier for (Inami+ 2017) MUSE catalog")
+    
+     v = Vizier(columns=["*"], row_limit=-1)
+    
+    try:
+        catalog_list = v.get_catalogs("J/A+A/608/A2")
+        
+        if len(catalog_list) == 0:
+            logger.error("No catalog found!")
+            return None
+        
+        # Get the combined table
+        c = catalog_list[0]
+        
+        logger.info(f"Got {len(catalog)} objects with spectroscopic redshifts")
+        logger.info(f"Columns: {catalog.colnames}")
+        
+        # I noticed that the rafelski and MUSE ones are different only in the decimal points since there is rounding rafelski, so im gonna round them to be the same.
+        if 'RAJ2000' in catalog.colnames:
+            catalog['RAJ2000'] = np.round(catalog['RAJ2000'], 6)
+        if 'DEJ2000' in catalog.colnames:
+            catalog['DEJ2000'] = np.round(catalog['DEJ2000'], 6)
+            
+        return c
+        
+    except Exception as e:
+        logger.error(f"VizieR query failed: {e}")
+        return None
+    
+def query_photometry_catalog():
+     """
+    Query Vizier for Rafelski et al. 2015 photometric redshift catalog.
+    
+    Returns
+    -------
+    c : Table
+        Photometric catalog with RA, DEC, z_phot
+    """
+    
+    ### We will be putting a magnitude limit, otherwise getting too crowded
+    logger.info("Querying VizieR for catalog (Rafelski+ 2015)")
+    
+    v = Vizier(columns=["*"], row_limit=-1)
+    
+     try:
+        # Query catalog by the name written
+        catalog_lst = v.get_catalogs("J/AJ/150/31")
+        
+        if len(catalog_list) == 0:
+            logger.error("No catalog found!")
+            return None
+        
+        # Get the main table thats labelled table5 on Vizier
+        c = catalog_lst[0]
+        
+        logger.info(f"Got {len(catalog)} objects with photometric redshifts")
+        logger.info(f"Columns: {catalog.colnames}")
+        
+        return c
+        
+    except Exception as e:
+        logger.error(f"VizieR query failed: {e}")
+        return None
+
+    
 def fits_image_loader(filename):
     '''
     Parameters
@@ -181,7 +259,11 @@ if __name__ == "__main__":
     plt.show()
     logging.info("Saved RGB composite as 'HST_RGB_composite.png' and pdf version")
     
+    logger.info("\n[STEP 2] Querying catalogs from VizieR...")
+    logger.info("This may take a minute...")
     
+    photo_cat = query_photometric_catalog()
+    spec_cat = query_spectroscopic_catalog()
 
 
 
