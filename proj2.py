@@ -41,6 +41,7 @@ spectroscopic redshifts: https://vizier.cds.unistra.fr/viz-bin/VizieR-4
 import os
 import sys
 import numpy as np
+import numpy.ma as ma
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -318,13 +319,18 @@ def rgb_img(green,blue,red,wcs):
     '''
     Used to create actual 3-color composite
     
-    using Asinhstretch for scaling
+    
     I'm not actually using this stretch anymore, im using the Lupton 2004 
     package, but i was using it before, so i've kept it in here
     
     https://docs.astropy.org/en/stable/api/astropy.visualization.AsinhStretch.html
     
-    Apparently good for rgb color images in astronomy 
+    Note: this function is redundant in that it creates an rgb composite once before the overlay,
+    and then the other function creates it with the overlay. i did this intentionally to show you both.
+    
+    Note the image is rotated here, an artifact characteristic of the drizzle file, but everything works fine.
+    
+    To show that everything worked fine, I plotted a "before" and "after" in my code 
     '''
     try:
         if not (red.shape == green.shape == blue.shape):
@@ -353,6 +359,71 @@ def rgb_img(green,blue,red,wcs):
 
     logger.info("RGB mosaic created successfully.")
     return fig, rgb_image
+
+
+def scatter_plotter(photo, spec, matched_indices, photo_z_col, spec_z_col):
+    '''
+    Creating the scatter plot to compare the photometric vs spectroscopic redshifts
+    
+    Parameters
+    ----------
+    photo : Table
+        Photometric catalog
+    spec: Table
+        Spectroscopic catalog
+    matched_indices : tuple
+        (photo_idx, spec_idx) of matched sources
+    photo_z_col, spec_z_col : str
+        Column names for redshifts
+        
+    Returns
+    --------
+  
+    fig : Figure
+        Matplotlib figure
+        
+    '''
+    p_idx, s_idx = matched_indices
+    
+    if len(p_idx) == 0:
+        logger.warning("No matched sources for redshift comparison")
+        return None
+    
+    z_photometric = photo[photo_z_col][p_idx]
+    z_spectroscopic = spec[spec_z_col][s_idx]
+    
+    ### So, after getting multiple errors with shaping and default values and weird stuff,
+    # I have learned, that there are these "masks" on some data, like [1.2,4.3,----,1.4,1.2] and it might be there in one dataset but not there in the other
+    # So I need to mask these things up!
+    
+    # I found this numpy function in the documentation
+    # https://numpy.org/doc/2.3/reference/generated/numpy.ma.filled.html
+    # this will convert the masked values in a masked array into nan values. We can then clean/mask the nan values and negative values!
+    
+    p_z = np.ma.filled(z_photometric, np.nan)
+    s_z = np.ma.filled(z_spectroscopic, np.nan)
+    
+    valid_mask = (p_z > 0) & (s_z > 0) & np.isfinite(p_z) & np.isfinite(s_z)
+    
+    if len(p_z) == 0:
+        logger.warning("No valid redshifts D:")
+        return None
+    
+    fig, ax = plt.subplots(figsize=(10, 10))
+    
+    ax.scatter(s_z, p_z, s=10, c='dodgerblue',
+              edgecolors='black', alpha = 0.7)
+              
+    ax.set_xlabel('Spectroscopic Redshift')
+    ax.set_ylabel('Photometric Redshift')
+    ax.set_title('Scatterplot of Photometric vs. Spectroscopic Redshifts')
+    plt.grid(True)
+    plt.show()
+    
+    return fig
+    
+        
+    
     
 if __name__ == "__main__":
 
@@ -411,3 +482,16 @@ if __name__ == "__main__":
     fig_cats.savefig("hudf_with_catalogs.pdf", bbox_inches='tight')
     logger.info("Saved overlayed mosaic")
     plt.show()
+    
+    
+    ### I checked the names in the csv file, so dont need to add any checkers to this
+    photo_z_col = "zph1"
+    photo_z_spec = "zMuse"
+    
+    fig_comparison = scatter_plotter(photo, spec, matched_indices, photo_z_col, spec_z_col)
+    
+    if fig_comparison is not None:
+        plt.savefig("redshift_comparison.png", dpi=300, bbox_inches='tight')
+        plt.savefig("redshift_comparison.pdf", bbox_inches='tight')
+        logger.info("Saved redshift comparison plot")
+        plt.show()
