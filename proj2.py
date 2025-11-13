@@ -491,7 +491,7 @@ if __name__ == "__main__":
     fig_comparison = scatter_plotter(photo, spec, matched_indices, photo_z_col, spec_z_col)
     
     if fig_comparison is not None:
-        plt.savefig("redshift_comparison.png", dpi=300, bbox_inches='tight')
-        plt.savefig("redshift_comparison.pdf", bbox_inches='tight')
+        fig_comparison.savefig("redshift_comparison.png", dpi=300, bbox_inches='tight')
+        fig_comparison.savefig("redshift_comparison.pdf", bbox_inches='tight')
         logger.info("Saved redshift comparison plot")
         plt.show()
