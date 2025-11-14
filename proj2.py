@@ -237,8 +237,13 @@ def overlayer(green, blue, red, wcs, photo_cat, matched_indices,
     rgb_image : ndarray
         RGB composite image
     '''
-    if not (red.shape == green.shape == blue.shape):
-        raise ValueError("All input images must have the same dimensions.")
+    try:
+        if not (red.shape == green.shape == blue.shape):
+            raise ValueError("All input images must have the same dimensions.")
+    
+    except Exception as e:
+        logger.error("Input images do not have same dimensions, exiting code....")
+        sys.exit(1)
     
     rgb_image = make_lupton_rgb(red, green, blue, stretch=0.01, Q=10)
     
@@ -257,10 +262,8 @@ def overlayer(green, blue, red, wcs, photo_cat, matched_indices,
     n_photo_only = np.sum(mask_photo_only)
     logger.info(f"Plotting {n_photo_only} photo-z only sources")
     
-    ax.scatter(pixel_coords[0][mask_photo_only], pixel_coords[1][mask_photo_only],
-              s=25, facecolors='none', edgecolors='cyan',
-              linewidths=0.6, alpha=0.4,
-              label=f'Photo-z only (N={n_photo_only})')
+    ax.scatter(pixel_coords[0][mask_photo_only], pixel_coords[1][mask_photo_only], s=25, facecolors='none', edgecolors='cyan', linewidths=0.6, alpha=0.4,
+    label=f'Photo-z only (N={n_photo_only})')
     
     # Plot spec-z available (has_spec == True) in red
     mask_has_spec = photo_cat['has_spec']
@@ -494,7 +497,6 @@ def inset_creator(ax, rgb_image, wcs, center_ra, center_dec, size_arcsec, photo_
     
     ### For display, we need to convert the pixels back to RA/DEC
     
-   
     
     subregion = rgb_image[y_min:y_max, x_min:x_max, :]
     ax.imshow(subregion, origin='lower', extent=[x_min, x_max, y_min, y_max])
@@ -553,14 +555,19 @@ def overlayer_with_insets(green, blue, red, wcs, photo_cat, matched_indices,
     ----------
     green, blue, red : ndarray
         Image data for each channel
+        
     wcs : WCS
-        World coordinate system
+        the wcs 
+        
     photo_cat : Table
         Photometric catalog (with 'has_spec' column added)
+        
     matched_indices : tuple
-        (photo_idx, spec_idx) of matched sources
+        indices of matched sources
+        
     inset_regions : list of dict
-        Each dict contains: {'ra': float, 'dec': float, 'size': float, 'label': str}
+        contains the ra, dec as flats and many other requirements
+        
     ra_col, dec_col : str
         Column names for coordinates
         
@@ -571,8 +578,13 @@ def overlayer_with_insets(green, blue, red, wcs, photo_cat, matched_indices,
     rgb_image : ndarray
         RGB composite image
     '''
-    if not (red.shape == green.shape == blue.shape):
-        raise ValueError("All input images must have the same dimensions.")
+    try:
+        if not (red.shape == green.shape == blue.shape):
+            raise ValueError("All input images must have the same dimensions.")
+    
+    except Exception as e:
+        logger.error("Not the same dimensions, exiting..")
+        sys.exit(1)
     
     rgb_image = make_lupton_rgb(red, green, blue, stretch=0.01, Q=10)
     
@@ -584,11 +596,12 @@ def overlayer_with_insets(green, blue, red, wcs, photo_cat, matched_indices,
     # The main panel will take columns 0-1, and the insets wil take columns 2-3
     
     import matplotlib.gridspec as gridspec
-    g = gridspec.GridSpec(3, 4, figure=fig, hspace=0.3, wspace=0.3,
-                          width_ratios=[1.5, 1.5, 1, 1])
+    g = gridspec.GridSpec(3, 4, figure=fig, hspace=0.3, wspace=0.3, width_ratios=[1.5, 1.5, 1, 1])
     
     # Main panel (spans all rows, first two columns)
     ax_main = fig.add_subplot(g[:, 0:2], projection=wcs)
+    
+    
     ax_main.imshow(rgb_image, origin='lower')
     
     # Overlay catalog sources on main panel
@@ -599,12 +612,10 @@ def overlayer_with_insets(green, blue, red, wcs, photo_cat, matched_indices,
     # Plot photo-z only sources
     mask_photo_only = ~photo_cat['has_spec']
     n_photo_only = np.sum(mask_photo_only)
-    logger.info(f"Plotting {n_photo_only} photo-z only sources")
+    
     
     ax_main.scatter(pixel_coords[0][mask_photo_only], pixel_coords[1][mask_photo_only],
-                   s=25, facecolors='none', edgecolors='cyan',
-                   linewidths=0.6, alpha=0.4,
-                   label=f'Photo-z only (N={n_photo_only})')
+                   s=25, facecolors='none', edgecolors='cyan', linewidths=0.8, alpha=0.4, label=f'Photo-z only (N={n_photo_only})')
     
     
     mask_has_spec = photo_cat['has_spec']
@@ -612,8 +623,8 @@ def overlayer_with_insets(green, blue, red, wcs, photo_cat, matched_indices,
 
     # plot spec soruces
     ax_main.scatter(pixel_coords[0][mask_has_spec], pixel_coords[1][mask_has_spec],
-                   s=60, facecolors='none', edgecolors='red',
-                   linewidths=1.2, alpha=0.8,
+                   s=40, facecolors='none', edgecolors='red',
+                   linewidths=0.8, alpha=0.8,
                    label=f'Spec-z available (N={n_spec})')
     
     # draw rectangles on main panel indicating inset regions
@@ -638,11 +649,15 @@ def overlayer_with_insets(green, blue, red, wcs, photo_cat, matched_indices,
     ax_main.set_title("Hubble Ultra Deep Field: Photometric vs Spectroscopic Redshifts\n" +
                      "RGB: F775W (Red) / F606W (Green) / F435W (Blue)",
                      fontsize=16, fontweight='bold', pad=20)
-    ax_main.set_xlabel("Right Ascension (J2000)", fontsize=13)
-    ax_main.set_ylabel("Declination (J2000)", fontsize=13)
-    ax_main.legend(loc='upper right', fontsize=11, framealpha=0.95)
-    ax_main.grid(color='white', ls='dotted', alpha=0.25)
+                     
+    ax_main.set_xlabel("Right Ascension (J2000)", fontsize=10)
     
+    ax_main.set_ylabel("Declination (J2000)", fontsize=10)
+    ax_main.legend(loc='upper right', fontsize=11)
+    ax_main.grid(color='white', alpha=0.25)
+    
+    
+    # inset positions given we got the 3 x 4 gridspec defined above
     inset_positions = [
         (0, 2), (0, 3),
         (1, 2), (1, 3),
@@ -650,10 +665,6 @@ def overlayer_with_insets(green, blue, red, wcs, photo_cat, matched_indices,
     ]
     
     for idx, region in enumerate(inset_regions):
-        if idx >= len(inset_positions):
-            logger.warning(f"Too many insets specified, skipping inset {idx+1}")
-            break
-        
         row, col = inset_positions[idx]
         ax_inset = fig.add_subplot(g[row, col])
         
@@ -744,8 +755,7 @@ if __name__ == "__main__":
     
     
     ### Need to change the pixels in x and y to ra and dec
-    inset_regions = [
-        {'ra': 53.16, 'dec': -27.78, 'size': 15, 'label': '(a)', 'color': 'red'},
+    inset_regions = [ {'ra': 53.16, 'dec': -27.78, 'size': 15, 'label': '(a)', 'color': 'brown'},
         {'ra': 53.15, 'dec': -27.79, 'size': 15, 'label': '(b)', 'color': 'lime'},
         {'ra': 53.17, 'dec': -27.77, 'size': 15, 'label': '(c)', 'color': 'orange'},
         {'ra': 53.14, 'dec': -27.80, 'size': 15, 'label': '(d)', 'color': 'cyan'},
@@ -753,9 +763,8 @@ if __name__ == "__main__":
         {'ra': 53.16, 'dec': -27.76, 'size': 15, 'label': '(f)', 'color': 'yellow'}
     ]
     
-    # Create multi-panel figure with insets
-    fig_multi, _ = overlayer_with_insets(green_data, blue_data, red_data, wcs,
-                                         photo, matched_indices, inset_regions)
+    # Create multi-panel figure with insets, not really concerned wiht the rgv image that is returned
+    fig_multi, _ = overlayer_with_insets(green_data, blue_data, red_data, wcs, photo, matched_indices, inset_regions)
     
     fig_multi.savefig("hudf_with_insets.png", dpi=300, bbox_inches='tight')
     fig_multi.savefig("hudf_with_insets.pdf", bbox_inches='tight')
