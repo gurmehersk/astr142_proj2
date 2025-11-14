@@ -26,6 +26,8 @@ c) Throughout the project, I use functions that we mainly saw in class, so there
 - skycoord_to_pixel [not sure if we saw this in class]
 - np.ma.fill --> to clean masked values in our z values 
 
+d) For the insets! The most challenging part of this project! I wasn't able to plot the coordinates next to the inset as the wcs scaling changes once we extract the subregion because the pixels now make up different amounts of the RA and DEC. I initially tried creating a new WcS, copying the old one and trimming it somehow, but this just was NOT working. I decided to just plot the pixels as is and remove the tic labels to avoid any irrevelant and redundant pixel axes.  
+
 References:
 
 Fits files: https://mast.stsci.edu/portal/Mashup/Clients/Mast/Portal.html
