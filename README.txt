@@ -8,7 +8,7 @@ link to online github repository: https://github.com/gurmehersk/astr142_proj2
 Welcome to the everlong project 2 code! There are a lot of references and notes I want to talk about here!
 
 
-**UPdate to part a, i changed the fits files and they run better now, no greenness. You may ignore the rant below, it is, however, part of the write up i guess.
+**UPdate to part a, i changed the fits files and they run better now, no greenness. However, the resolution in pdfs have dropped a bit. This i guess is the tradeoff because I presume it isn't a high science quality image. I don't think i could do more than this, however.
 
 a) The rgb composite might be a little green, displeasing to the eyes: I am aware, and I apologize! However, due to the slow speed of my laptop, which was taking a while to download the 6GB files, and after downloading a wrong file once [i realized after waiting for 30 minutes], I decided to use files which for which shapes could be easily tested and image stacks could be created immediately. The three files i found were found in the link below, and were in the F435W, F606W, and F775W bands. Clearly, this range makes the images a little greener than what would be comfortable. However, it is clear still that some sort of stacking has occured because we can still see the redness in the rgb composite. Admittedly, the blue part of the spectrum is difficult to see, even though I had F435W. I couldn't really change this as other files were giving me errors for some reason, or were taking too long to download. [You will see, i tried multiple different files that have been commented out in the main section of the code]
 
