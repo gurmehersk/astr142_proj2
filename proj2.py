@@ -673,16 +673,19 @@ if __name__ == "__main__":
     
     # 435 is for Blue light
     #f_435 = "/Users/gurmeher/Downloads/proj2_astr142/435fw/HST/hst_10086_7d_acs_wfc_f435w_j8wc7d/hst_10086_7d_acs_wfc_f435w_j8wc7d_drc.fits"
-    f_435 = "/Users/gurmeher/Downloads/proj2_astr142/h_udf_wfc_b_drz_img.fits"
+    #f_435 = "/Users/gurmeher/Downloads/proj2_astr142/h_udf_wfc_b_drz_img.fits"
+    f_435 = "/Users/gurmeher/Downloads/proj2_astr142/HUDF_blue.fits"
     #f_435 = "/Users/gurmeher/Downloads/proj2_astr142/hst_10086_7d_acs_wfc_f435w_j8wc7d_drc.fits"
     # 606 is for Green Light
     #f_606 = "/Users/gurmeher/Downloads/proj2_astr142/606fw/HST/hst_10086_87_acs_wfc_f606w_j8wc87/hst_10086_87_acs_wfc_f606w_j8wc87_drc.fits"
-    f_606 = "/Users/gurmeher/Downloads/proj2_astr142/h_udf_wfc_v_drz_img.fits"
+    #f_606 = "/Users/gurmeher/Downloads/proj2_astr142/h_udf_wfc_v_drz_img.fits"
+    f_606 = "/Users/gurmeher/Downloads/proj2_astr142/HUDF_green.fits"
     
     # 775 is for Red Light
     #f_775 = "/Users/gurmeher/Downloads/proj2_astr142/775fw/HST/hst_10086_7e_acs_wfc_f775w_j8wc7e/hst_10086_7e_acs_wfc_f775w_j8wc7e_drc.fits"
     #f_775 = "/Users/gurmeher/Downloads/proj2_astr142/hst_10086_7e_acs_wfc_f775w_j8wc7e_drc.fits"
-    f_775 = "/Users/gurmeher/Downloads/proj2_astr142/h_udf_wfc_i_drz_img.fits"
+    #f_775 = "/Users/gurmeher/Downloads/proj2_astr142/h_udf_wfc_i_drz_img.fits"
+    f_775 = "/Users/gurmeher/Downloads/proj2_astr142/HUDF_red.fits"
     
     #f_850 = "/Users/gurmeher/Downloads/proj2_astr142/hst_10086_7c_acs_wfc_f850lp_j8wc7c_drc.fits"
     
