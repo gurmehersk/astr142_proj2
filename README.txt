@@ -2,6 +2,9 @@ README.txt
 
 PROJECT 2:
 
+link to online github repository: https://github.com/gurmehersk/astr142_proj2
+
+
 Welcome to the everlong project 2 code! There are a lot of references and notes I want to talk about here!
 
 
